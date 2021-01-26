@@ -15,3 +15,8 @@ The NEP4 standard is a start, but leaves significant room for improvement.
    that will allow our projects to interoperate
 2. Unite the NEAR-NFT ecosystem around a shared ethos of community building and
    interoperability
+
+
+This repo is in VERY early stages and is by all means a work in progress. Channels:
+- To make informal comments and discuss this repo: use the Telegram channel
+- To submit code updates to this repo: create a Pull request or Issue
