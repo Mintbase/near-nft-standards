@@ -1,25 +1,10 @@
-# Mintbase Store API
+// NOTE: This API is out of date, as of Feb 5, 2021.
+// Last updated on Jan 30, 2021.
 
-## What Mintbase considers important out of this spec:
-
- 1. An Option<Royalty> field on each Token means Markets may query Royalty
- information intended by the original token creator.
-
- 2. the `list_token` and `batch_list_token` methods ought to be synchronized
- across token-producer contracts and market contracts, so that token factories
- and markets may interoperably list one another's tokens.
-
- 3. Token level permissions to grant and revoke permission to transfer a
- token, as opposed te the NEP4 standard which only allows account-level
- permissions.
-
-
-##  API
-```rust
-pub struct MintbaseStore {
+pub struct MintbaseMint {
     marketplace_address: AccountId,
     minters: LookupSet<AccountId>,
-    store_description: StoreDescription,
+    mint_description: MintDescription,
     tokens: LookupMap<TokenId, TokenDescription>,
     permissioners: LookupMap<AccountId, LookupSet<AccountId>>,
     tokens_minted: u64,
@@ -60,43 +45,42 @@ pub struct Fraction {
   pub denominator: u32,
 }
 
-
-pub struct StoreDescription {
-    pub store_id: StoreId,
+pub struct MintDescription {
+    pub mint_id: MintId,
     pub owner_id: AccountId,
     pub icon_base64: Option<String>,
     pub symbol: Option<String>,
     pub base_uri: String,
 }
 
-/// This trait is the Mintbase Store V1 API, minus the NEP4 Methods.
+/// This trait is the Mintbase Mint V1 API, minus the NEP4 Methods.
 pub trait Mintbase {
     //////////////////////////////
-    // Store Owner Only Methods //
+    // Mint Owner Only Methods //
     //////////////////////////////
-    /// Set the marketplace this store lists tokens to.
+    /// Set the marketplace this mint lists tokens to.
     fn set_marketplace(&mut self, market_address: AccountId);
 
     /// Modify privileges of `account_id`. Minters are able to mint tokens on this
-    /// `MintbaseStore`.
+    /// `MintbaseMint`.
     fn grant_minter(&mut self, account_id: AccountId);
 
     /// Modify privileges of `account_id`. Minters are able to mint tokens on this
-    /// `MintbaseStore`.
+    /// `MintbaseMint`.
     fn revoke_minter(&mut self, account_id: AccountId);
 
-    /// Transfer ownership of store to new owner. Setting `keep_old_minters`
+    /// Transfer ownership of mint to new owner. Setting `keep_old_minters`
     /// allows all existing minters (including the prior owner) to continue to
     /// mint tokens.
-    fn transfer_store_ownership(&mut self, new_owner: AccountId, keep_old_minters: bool);
+    fn transfer_mint_ownership(&mut self, new_owner: AccountId, keep_old_minters: bool);
 
-    /// `icon_base64` is best understood as the store logo/icon. Only the store
+    /// `icon_base64` is best understood as the mint logo/icon. Only the mint
     /// owner may update it.
     fn set_icon_base64(&mut self, base64: Option<String>);
 
-    /// The `base_uri` for the store is the identifier used to look up the store
-    /// on Arweave. Changing the `base_uri` requires the store owner to be
-    /// responsible for making sure their store location is maintained by their
+    /// The `base_uri` for the mint is the identifier used to look up the mint
+    /// on Arweave. Changing the `base_uri` requires the mint owner to be
+    /// responsible for making sure their mint location is maintained by their
     /// preferred storage provider.
     fn set_base_uri(&mut self, base_uri: String);
 
@@ -120,7 +104,7 @@ pub trait Mintbase {
     //////////////////////////
     // Minters Only Methods //
     //////////////////////////
-    /// The core store function. Mint token will mint `num_to_mint` copies of a
+    /// The core mint function. Mint token will mint `num_to_mint` copies of a
     /// token with `meta_id`, assigning `owner_id` as the owner of the token. Note
     /// that `meta_id`'s are not required to be unique. Users from the minter set
     /// (including the owner) may call this function.
@@ -139,7 +123,7 @@ pub trait Mintbase {
     /////////////////////////////////////////
     // Cross Contract Calls to Marketplace //
     /////////////////////////////////////////
-    /// List a token to the Marketplace stored on this store contract. The
+    /// List a token to the Marketplace mintd on this mint contract. The
     /// Marketplace contract is expected to have a method, receive_list_token.
     fn list_token(
         &mut self,
@@ -149,14 +133,16 @@ pub trait Mintbase {
         split_owners: Option<HashMap<AccountId, f32>>,
     );
 
-  /// List several tokens to the Marketplace stored on this store contract. The
+  /// List several tokens to the Marketplace mintd on this mint contract. The
 	/// Marketplace contract is expected to have a method, receive_batch_list_token.
-    fn batch_list_token(
-        &mut self,
-        token_ids: Vec<TokenId>,
-        autotransfer: bool,
-        asking_price: Balance,
-        split_owners: Option<HashMap<AccountId, f32>>,
+    fn list_token(
+      &mut self,
+      permissions_intermediary_address: Option<AccountId>,
+      market_address: AccountId,
+      token_ids: Vec<TokenId>,
+      autotransfer: bool,
+      asking_price: Balance,
+      split_owners: Option<HashMap<AccountId, f32>>,
     );
 
     ///////////////////////////////////////////
@@ -176,7 +162,7 @@ pub trait Mintbase {
     fn batch_burn(&mut self, token_ids: Vec<TokenId>);
 
     ///////////////////////////////
-    // Store Interfacing Getters //
+    // Mint Interfacing Getters //
     ///////////////////////////////
     /// If caller is minter, return true.
     fn am_minter(&self) -> bool;
@@ -198,27 +184,27 @@ pub trait Mintbase {
     /// true.
     fn am_self_or_permissioner(&self, on_behalf: AccountId) -> bool;
 
-    /// Get the `store_id` of this store.
-    fn get_store_id(&self) -> &StoreId;
+    /// Get the `mint_id` of this mint.
+    fn get_mint_id(&self) -> &MintId;
 
-    /// Get the `owner_id` of this store.
-    fn get_store_owner(&self) -> &AccountId;
+    /// Get the `owner_id` of this mint.
+    fn get_mint_owner(&self) -> &AccountId;
 
-    /// Get the `icon_base64` of this store.
-    fn get_store_icon(&self) -> &Option<String>;
+    /// Get the `icon_base64` of this mint.
+    fn get_mint_icon(&self) -> &Option<String>;
 
-    /// Get the `base_uri` of this store.
-    fn get_store_base_uri(&self) -> &String;
+    /// Get the `base_uri` of this mint.
+    fn get_mint_base_uri(&self) -> &String;
 
-    /// Get the `symbol` of this store.
-    fn get_store_symbol(&self) -> &Option<String>;
+    /// Get the `symbol` of this mint.
+    fn get_mint_symbol(&self) -> &Option<String>;
 }
 
 ///////////////////////////////
 // Token Interfacing Getters //
 ///////////////////////////////
 #[near_bindgen]
-impl MintbaseStore {
+impl MintbaseMint {
     /// Get the `minter` for token with `token_id`.
     fn get_token_minter(&self, token_id: TokenId) -> AccountId;
 
@@ -226,7 +212,7 @@ impl MintbaseStore {
     fn get_token_meta_id(&self, token_id: TokenId) -> MetaId;
 
     /// Token URI is generated to index the token on whatever distributed storage
-    /// platform the store uses (Arweave by Mintbase default, though store owners
+    /// platform the mint uses (Arweave by Mintbase default, though mint owners
     /// may opt into their own).
     fn get_token_uri(&self, token_id: TokenId) -> String;
 
@@ -246,9 +232,8 @@ impl MintbaseStore {
 
     /// Get the `token_unique_id` for `token_id`. The `token_unique_id` is the
     /// immutable combination of the token's `token_id` (unique within this
-    /// store), and the Store address. The `token_id` distinguishes tokens from
-    /// one another within the store, but not between stores. The UniqueId is
-    /// unique across stores.
+    /// mint), and the Mint address. The `token_id` distinguishes tokens from
+    /// one another within the mint, but not between mints. The UniqueId is
+    /// unique across mints.
     fn get_token_unique_id(&self, token_id: TokenId) -> UniqueId;
 }
-```
